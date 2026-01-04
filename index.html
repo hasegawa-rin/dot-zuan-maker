@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DOT ZUAN MAKER</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- ドット絵風フォントの読み込み -->
-    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Doto (400) と DotGothic16 の読み込み -->
+    <link href="https://fonts.googleapis.com/css2?family=Doto:wght@400&family=DotGothic16&display=swap" rel="stylesheet">
     <style>
         /* スクロールバーのカスタマイズ */
         ::-webkit-scrollbar {
@@ -31,9 +31,10 @@
             width: max-content;
         }
 
-        /* タイトルのドットフォント適用 */
+        /* タイトルの Doto フォント適用 */
         .pixel-font {
-            font-family: 'DotGothic16', sans-serif;
+            font-family: 'Doto', sans-serif;
+            font-weight: 400;
         }
 
         /* 座標ヘッダーの基本スタイル */
@@ -69,7 +70,6 @@
             cursor: crosshair;
         }
 
-        /* 中身のコンテンツボックスを厳密に正方形にする */
         .cell-inner {
             display: flex;
             align-items: center;
@@ -132,7 +132,6 @@
             transform: scale(1.1);
         }
 
-        /* 透明を表す格子模様 */
         .bg-checkerboard {
             background-color: #fff;
             background-image: 
@@ -142,7 +141,6 @@
             background-position: 0 0, 4px 4px;
         }
 
-        /* 背景設定用 */
         .bg-config-dot {
             background-color: #fff;
             background-image: linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee), linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee);
@@ -176,6 +174,30 @@
             padding-bottom: 0.75rem;
             margin-bottom: 0.75rem;
         }
+
+        #mini-map-container {
+            width: 100%;
+            background-color: white;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            display: block;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        #miniMapCanvas {
+            width: 100%;
+            height: auto;
+            image-rendering: pixelated;
+            display: block;
+        }
+        
+        .navigator-toggle {
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .navigator-toggle:hover {
+            background-color: #f1f5f9;
+        }
         
         input[type=range] {
             accent-color: #2563eb;
@@ -197,10 +219,10 @@
 </head>
 <body class="bg-slate-50 h-screen w-screen text-slate-800 font-sans flex flex-col overflow-hidden">
 
-    <!-- ヘッダー：コンパクト・太字タイトル -->
+    <!-- ヘッダー -->
     <header class="bg-slate-900 px-5 py-1.5 flex justify-between items-center text-white shadow-md z-40 shrink-0">
         <div class="flex items-baseline gap-4">
-            <h1 class="text-xl pixel-font font-bold tracking-wider text-white">
+            <h1 class="text-xl pixel-font tracking-wider text-white">
                 DOT ZUAN MAKER
             </h1>
             <span class="text-[9px] font-medium text-slate-500 opacity-70 tracking-tighter hidden sm:block">
@@ -221,118 +243,128 @@
 
     <div class="flex flex-1 min-h-0 overflow-hidden">
         <!-- 1カラム目: 設定パネル -->
-        <aside class="w-60 bg-white border-r border-slate-200 overflow-y-auto p-4 shrink-0 h-full z-30 shadow-sm">
-            <div class="control-section">
-                <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">1. 素材読み込み</label>
-                <input type="file" id="imageInput" accept="image/*" class="w-full text-[10px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
-            </div>
+        <aside class="w-60 bg-white border-r border-slate-200 flex flex-col shrink-0 h-full z-30 shadow-sm overflow-hidden">
+            <div class="flex-1 overflow-y-auto p-4 pb-0 space-y-2">
+                <div class="control-section">
+                    <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">1. 素材読み込み</label>
+                    <input type="file" id="imageInput" accept="image/*" class="w-full text-[10px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                </div>
 
-            <div class="control-section">
-                <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">2. 基本構成</label>
-                <div class="space-y-4">
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-[10px] font-bold text-slate-600">横幅 (ドット)</label>
-                            <span id="val-width" class="text-[10px] font-mono font-bold text-blue-600">60</span>
+                <div class="control-section">
+                    <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">2. 基本構成</label>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-[10px] font-bold text-slate-600">横幅 (ドット)</label>
+                                <span id="val-width" class="text-[10px] font-mono font-bold text-blue-600">60</span>
+                            </div>
+                            <input type="range" id="targetWidth" value="60" min="5" max="60" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
                         </div>
-                        <input type="range" id="targetWidth" value="60" min="5" max="60" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-[10px] font-bold text-slate-600">最大色数</label>
+                                <span id="val-colors" class="text-[10px] font-mono font-bold text-blue-600">27</span>
+                            </div>
+                            <input type="range" id="maxColors" value="27" min="2" max="27" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                        </div>
                     </div>
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-[10px] font-bold text-slate-600">最大色数</label>
-                            <span id="val-colors" class="text-[10px] font-mono font-bold text-blue-600">27</span>
+                </div>
+
+                <div class="control-section">
+                    <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">3. 図案データ設定</label>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-[10px] font-bold text-slate-600">明るさ</label>
+                                <span id="val-brightness" class="text-[10px] text-slate-400">100%</span>
+                            </div>
+                            <input type="range" id="brightness" value="100" min="50" max="150" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
                         </div>
-                        <input type="range" id="maxColors" value="27" min="2" max="27" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-[10px] font-bold text-slate-600">コントラスト</label>
+                                <span id="val-contrast" class="text-[10px] text-slate-400">100%</span>
+                            </div>
+                            <input type="range" id="contrast" value="100" min="50" max="150" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-[10px] font-bold text-slate-600">彩度</label>
+                                <span id="val-saturate" class="text-[10px] text-slate-400">100%</span>
+                            </div>
+                            <input type="range" id="saturate" value="100" min="0" max="200" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-[10px] font-bold text-slate-600">色相シフト</label>
+                                <span id="val-hue" class="text-[10px] text-slate-400">0°</span>
+                            </div>
+                            <input type="range" id="hue" value="0" min="-180" max="180" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">背景除去の対象</label>
+                            <select id="bgMode" class="w-full p-1.5 border border-slate-200 rounded text-[10px] bg-slate-50 outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                                <option value="none">なし</option>
+                                <option value="white">白のみ</option>
+                                <option value="auto" selected>自動判定</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label for="useDithering" class="text-[10px] font-bold text-slate-600">ディザリング変換</label>
+                            <input type="checkbox" id="useDithering" class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label for="useGooglePalette" class="text-[10px] font-bold text-slate-600">Googleカラー制限</label>
+                            <input type="checkbox" id="useGooglePalette" class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-section border-none">
+                    <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">4. キャンバス表示</label>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-[10px] font-bold text-slate-600">ズーム倍率</label>
+                                <span id="val-zoom" class="text-[10px] font-mono font-bold text-blue-600">100%</span>
+                            </div>
+                            <input type="range" id="zoom" value="100" min="100" max="500" step="10" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label for="showCoordinates" class="text-[10px] font-bold text-slate-600">座標を表示</label>
+                            <input type="checkbox" id="showCoordinates" checked class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label for="highlightBg" class="text-[10px] font-bold text-slate-600">背景範囲をチェック</label>
+                            <input type="checkbox" id="highlightBg" class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label for="showGridBold" class="text-[10px] font-bold text-slate-600">5マスごとの太線</label>
+                            <input type="checkbox" id="showGridBold" class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label for="showNumbers" class="text-[10px] font-bold text-slate-600">数字を表示</label>
+                            <input type="checkbox" id="showNumbers" checked class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 pt-1 pb-4">
+                            <button id="btn-square" class="shape-btn p-1.5 border rounded bg-blue-600 border-blue-600 text-white text-[10px] font-bold shadow-sm transition-all" data-shape="square">四角形</button>
+                            <button id="btn-circle" class="shape-btn p-1.5 border rounded bg-white border-slate-200 text-[10px] hover:bg-slate-50 transition-all" data-shape="circle">円形</button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="control-section">
-                <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">3. 図案データ設定</label>
-                <div class="space-y-4">
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-[10px] font-bold text-slate-600">明るさ</label>
-                            <span id="val-brightness" class="text-[10px] text-slate-400">100%</span>
-                        </div>
-                        <input type="range" id="brightness" value="100" min="50" max="150" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
-                    </div>
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-[10px] font-bold text-slate-600">コントラスト</label>
-                            <span id="val-contrast" class="text-[10px] text-slate-400">100%</span>
-                        </div>
-                        <input type="range" id="contrast" value="100" min="50" max="150" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
-                    </div>
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-[10px] font-bold text-slate-600">彩度</label>
-                            <span id="val-saturate" class="text-[10px] text-slate-400">100%</span>
-                        </div>
-                        <input type="range" id="saturate" value="100" min="0" max="200" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
-                    </div>
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-[10px] font-bold text-slate-600">色相</label>
-                            <span id="val-hue" class="text-[10px] text-slate-400">0°</span>
-                        </div>
-                        <input type="range" id="hue" value="0" min="-180" max="180" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-600 mb-1">背景除去の対象</label>
-                        <select id="bgMode" class="w-full p-1.5 border border-slate-200 rounded text-[10px] bg-slate-50 outline-none focus:ring-1 focus:ring-blue-500 transition-all">
-                            <option value="none">なし</option>
-                            <option value="white">白のみ</option>
-                            <option value="auto" selected>自動判定</option>
-                        </select>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <label for="useDithering" class="text-[10px] font-bold text-slate-600">ディザリング変換</label>
-                        <input type="checkbox" id="useDithering" class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <label for="useGooglePalette" class="text-[10px] font-bold text-slate-600">Googleカラー制限</label>
-                        <input type="checkbox" id="useGooglePalette" class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+            <!-- NAVIGATOR (全体を確認) -->
+            <div class="border-t border-slate-200 bg-slate-50 shrink-0 sticky bottom-0 shadow-inner">
+                <div id="nav-toggle-header" class="navigator-toggle px-4 py-3 flex justify-between items-center cursor-pointer">
+                    <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest pointer-events-none">NAVIGATOR (全体を確認)</label>
+                    <svg id="nav-arrow" class="w-3 h-3 text-slate-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                </div>
+                <div id="mini-map-body" class="px-4 pb-4 hidden">
+                    <div id="mini-map-container" class="bg-checkerboard">
+                        <canvas id="miniMapCanvas"></canvas>
                     </div>
                 </div>
-            </div>
-
-            <div class="control-section border-none">
-                <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">4. キャンバス表示</label>
-                <div class="space-y-4">
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-[10px] font-bold text-slate-600">ズーム倍率</label>
-                            <span id="val-zoom" class="text-[10px] font-mono font-bold text-blue-600">100%</span>
-                        </div>
-                        <input type="range" id="zoom" value="100" min="100" max="500" step="10" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <label for="showCoordinates" class="text-[10px] font-bold text-slate-600">座標を表示</label>
-                        <input type="checkbox" id="showCoordinates" checked class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <label for="highlightBg" class="text-[10px] font-bold text-slate-600">背景範囲をチェック</label>
-                        <input type="checkbox" id="highlightBg" class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <label for="showGridBold" class="text-[10px] font-bold text-slate-600">5マスごとの太線</label>
-                        <input type="checkbox" id="showGridBold" class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <label for="showNumbers" class="text-[10px] font-bold text-slate-600">数字を表示</label>
-                        <input type="checkbox" id="showNumbers" checked class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 pt-1">
-                        <button id="btn-square" class="shape-btn p-1.5 border rounded bg-blue-600 border-blue-600 text-white text-[10px] font-bold shadow-sm transition-all" data-shape="square">四角形</button>
-                        <button id="btn-circle" class="shape-btn p-1.5 border rounded bg-white border-slate-200 text-[10px] hover:bg-slate-50 transition-all" data-shape="circle">円形</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="loadingStatus" class="flex items-center gap-2 text-[10px] text-blue-600 font-black hidden">
-                <span class="loading-icon"></span>
-                <span>計算中...</span>
             </div>
         </aside>
 
@@ -340,7 +372,14 @@
         <main class="flex-1 bg-slate-100 flex flex-col h-full overflow-hidden border-r border-slate-200 min-w-0">
             <div id="resultArea" class="hidden h-full flex flex-col min-h-0">
                 <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Canvas View</span>
+                    <div class="flex items-center gap-3">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Canvas View</span>
+                        <!-- 計算中インジケーター -->
+                        <div id="loadingStatus" class="flex items-center gap-1.5 text-[9px] text-blue-600 font-bold hidden">
+                            <span class="loading-icon"></span>
+                            <span>計算中...</span>
+                        </div>
+                    </div>
                     <span id="info-res" class="text-[9px] font-mono text-slate-400 tracking-tighter">-- x --</span>
                 </div>
                 <div class="flex-1 min-h-0 overflow-hidden">
@@ -359,7 +398,7 @@
         <!-- 3カラム目: パレット -->
         <aside class="w-[72px] bg-slate-50 overflow-y-auto shrink-0 h-full flex flex-col items-center border-l border-slate-200 shadow-inner">
             <div class="w-full p-2 border-b border-slate-200 bg-white sticky top-0 z-10 text-center shadow-sm">
-                <h2 class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Palette</h2>
+                <h2 class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">PALETTE</h2>
             </div>
             <div id="legendContainer" class="w-full flex flex-col">
             </div>
@@ -408,6 +447,10 @@
             placeholder: document.getElementById('placeholder'),
             patternContainer: document.getElementById('pattern-container'),
             canvas: document.getElementById('processCanvas'),
+            miniMapCanvas: document.getElementById('miniMapCanvas'),
+            miniMapBody: document.getElementById('mini-map-body'),
+            navToggleHeader: document.getElementById('nav-toggle-header'),
+            navArrow: document.getElementById('nav-arrow'),
             valWidth: document.getElementById('val-width'),
             valColors: document.getElementById('val-colors'),
             valHue: document.getElementById('val-hue'),
@@ -420,6 +463,7 @@
         };
 
         const ctx = elements.canvas.getContext('2d');
+        const mctx = elements.miniMapCanvas.getContext('2d');
         let currentGridData = [];
         let backupGridData = []; 
         let currentPalette = [];
@@ -430,7 +474,19 @@
         let activeBrushId = null;
         let bgHighlightColor = '#ff00ff';
 
+        const hexToRgb = (hex) => {
+            const res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return res ? { r: parseInt(res[1], 16), g: parseInt(res[2], 16), b: parseInt(res[3], 16) } : {r:0,g:0,b:0};
+        };
+        const rgbToHex = (r, g, b) => "#" + [r, g, b].map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+
         const GOOGLE_PALETTE_RGB = GOOGLE_PALETTE_HEX.map(hex => hexToRgb(hex));
+
+        elements.navToggleHeader.addEventListener('click', () => {
+            const isHidden = elements.miniMapBody.classList.toggle('hidden');
+            elements.navArrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+            if (!isHidden) updateMiniMap();
+        });
 
         [
             elements.targetWidth, elements.maxColors, elements.bgMode, 
@@ -442,7 +498,10 @@
                 updateLabels();
                 if (['zoom', 'showGridBold', 'showNumbers', 'showCoordinates', 'highlightBg'].includes(el.id)) {
                     adjustCellSizes();
-                    if (el.id !== 'zoom') renderResult();
+                    if (el.id !== 'zoom') {
+                        renderResult();
+                        updateMiniMap();
+                    }
                 } else {
                     triggerUpdate();
                 }
@@ -467,7 +526,7 @@
                 ci.className = 'shape-btn p-1.5 border rounded bg-white border-slate-200 text-slate-400 text-[10px] hover:bg-slate-50 transition-all';
             } else {
                 ci.className = 'shape-btn p-1.5 border rounded bg-blue-600 border-blue-600 text-white text-[10px] font-bold shadow-sm transition-all';
-                sq.className = 'shape-btn p-1.5 border rounded bg-white border-slate-200 text-slate-400 text-[10px] hover:bg-slate-50 transition-all';
+                sq.className = 'shape-btn p-1.5 border rounded bg-white border-slate-200 text-[10px] hover:bg-slate-50 transition-all';
             }
         }
 
@@ -476,6 +535,7 @@
                 currentShape = btn.dataset.shape;
                 updateShapeButtonUI();
                 renderResult();
+                updateMiniMap();
             });
         });
 
@@ -577,6 +637,7 @@
             backupGridData = JSON.parse(JSON.stringify(currentGridData));
             
             renderResult();
+            updateMiniMap();
         }
 
         function buildGrid(data, w, h, bgMask, useDithering) {
@@ -682,12 +743,6 @@
             return best;
         }
 
-        function rgbToHex(r, g, b) { return "#" + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join(''); }
-        function hexToRgb(hex) {
-            const res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return res ? { r: parseInt(res[1], 16), g: parseInt(res[2], 16), b: parseInt(res[3], 16) } : {r:0,g:0,b:0};
-        }
-
         function renderResult() {
             if (!currentGridData.length) return;
             elements.placeholder.classList.add('hidden');
@@ -744,6 +799,7 @@
                         currentGridData[y][x] = newVal;
                         const targetInner = td.querySelector('.cell-inner');
                         updateSingleCellInner(targetInner, newVal, highlight, showNums);
+                        updateMiniMap();
                     };
 
                     const inner = document.createElement('div');
@@ -763,7 +819,6 @@
             });
         }
 
-        // 単一セルの「中身」だけを更新する
         function updateSingleCellInner(inner, val, highlight, showNums) {
             inner.innerHTML = '';
             inner.className = 'cell-inner';
@@ -806,6 +861,35 @@
             }
         }
 
+        function updateMiniMap() {
+            if (!currentGridData.length) return;
+            const w = currentGridData[0].length;
+            const h = currentGridData.length;
+            elements.miniMapCanvas.width = w;
+            elements.miniMapCanvas.height = h;
+
+            const highlight = elements.highlightBg.checked;
+            
+            mctx.clearRect(0, 0, w, h);
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const val = currentGridData[y][x];
+                    if (val === null) {
+                        if (highlight) {
+                            mctx.fillStyle = bgHighlightColor;
+                            mctx.fillRect(x, y, 1, 1);
+                        }
+                    } else {
+                        const color = currentPalette.find(p => p.id === val);
+                        if (color) {
+                            mctx.fillStyle = color.hex;
+                            mctx.fillRect(x, y, 1, 1);
+                        }
+                    }
+                }
+            }
+        }
+
         function triggerColorPicker(initialColor, onUpdate) {
             const picker = document.createElement('input');
             picker.type = 'color';
@@ -820,7 +904,6 @@
 
         function renderLegend() {
             elements.legendContainer.innerHTML = '';
-            
             const eraserItem = document.createElement('div');
             eraserItem.className = 'legend-item shadow-sm ' + (activeBrushId === -1 ? 'active-brush' : '');
             eraserItem.onclick = () => {
@@ -840,6 +923,7 @@
                     elements.highlightBg.checked = true;
                     bgPreview.style.backgroundColor = bgHighlightColor;
                     renderResult();
+                    updateMiniMap();
                 });
             };
             const bgLabel = document.createElement('span');
@@ -867,6 +951,7 @@
                             c.hex = newColor;
                             c.r = rgb.r; c.g = rgb.g; c.b = rgb.b;
                             renderResult();
+                            updateMiniMap();
                         }
                     });
                 };
@@ -883,6 +968,7 @@
             currentPalette = JSON.parse(JSON.stringify(backupPalette));
             currentGridData = JSON.parse(JSON.stringify(backupGridData));
             renderResult();
+            updateMiniMap();
         };
 
         function adjustCellSizes() {
