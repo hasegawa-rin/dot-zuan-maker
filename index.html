@@ -69,7 +69,7 @@
             cursor: crosshair;
         }
 
-        /* 中身のコンテンツボックス */
+        /* 中身のコンテンツボックスを厳密に正方形にする */
         .cell-inner {
             display: flex;
             align-items: center;
@@ -132,7 +132,7 @@
             transform: scale(1.1);
         }
 
-        /* 透明を表す格子模様（チェッカーボード） */
+        /* 透明を表す格子模様 */
         .bg-checkerboard {
             background-color: #fff;
             background-image: 
@@ -142,7 +142,7 @@
             background-position: 0 0, 4px 4px;
         }
 
-        /* 背景設定用のボタン（格子模様の上に色プレビュー） */
+        /* 背景設定用 */
         .bg-config-dot {
             background-color: #fff;
             background-image: linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee), linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee);
@@ -197,7 +197,7 @@
 </head>
 <body class="bg-slate-50 h-screen w-screen text-slate-800 font-sans flex flex-col overflow-hidden">
 
-    <!-- ヘッダー：極限までコンパクト化 -->
+    <!-- ヘッダー：コンパクト・太字タイトル -->
     <header class="bg-slate-900 px-5 py-1.5 flex justify-between items-center text-white shadow-md z-40 shrink-0">
         <div class="flex items-baseline gap-4">
             <h1 class="text-xl pixel-font font-bold tracking-wider text-white">
@@ -220,6 +220,7 @@
     </header>
 
     <div class="flex flex-1 min-h-0 overflow-hidden">
+        <!-- 1カラム目: 設定パネル -->
         <aside class="w-60 bg-white border-r border-slate-200 overflow-y-auto p-4 shrink-0 h-full z-30 shadow-sm">
             <div class="control-section">
                 <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">1. 素材読み込み</label>
@@ -335,6 +336,7 @@
             </div>
         </aside>
 
+        <!-- 2カラム目: 図案キャンバス -->
         <main class="flex-1 bg-slate-100 flex flex-col h-full overflow-hidden border-r border-slate-200 min-w-0">
             <div id="resultArea" class="hidden h-full flex flex-col min-h-0">
                 <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
@@ -349,11 +351,12 @@
             </div>
 
             <div id="placeholder" class="flex-1 flex flex-col items-center justify-center text-slate-300 px-4 text-center">
-                <svg class="w-12 h-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.587-1.587a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.587-1.587a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 <p class="text-[10px] font-bold tracking-widest uppercase text-center px-4">画像を読み込んでください</p>
             </div>
         </main>
 
+        <!-- 3カラム目: パレット -->
         <aside class="w-[72px] bg-slate-50 overflow-y-auto shrink-0 h-full flex flex-col items-center border-l border-slate-200 shadow-inner">
             <div class="w-full p-2 border-b border-slate-200 bg-white sticky top-0 z-10 text-center shadow-sm">
                 <h2 class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Palette</h2>
@@ -760,6 +763,7 @@
             });
         }
 
+        // 単一セルの「中身」だけを更新する
         function updateSingleCellInner(inner, val, highlight, showNums) {
             inner.innerHTML = '';
             inner.className = 'cell-inner';
@@ -777,15 +781,14 @@
             } else {
                 inner.classList.remove('bg-checkerboard');
                 inner.style.backgroundImage = 'none';
-                const color = currentPalette.find(p => p.id === v || (typeof v === 'number' && p.id === val));
-                // Fix for the find logic
                 const foundColor = currentPalette.find(p => p.id === val);
                 if (!foundColor) return;
                 const b = (foundColor.r*299+foundColor.g*587+foundColor.b*114)/1000;
                 const textColor = b > 128 ? '#000' : '#fff';
                 inner.dataset.originalColor = textColor;
-                const currentSz = parseFloat(inner.style.width);
-                inner.style.color = (currentSz < 13) ? 'transparent' : textColor;
+                
+                const currentWidthVal = parseFloat(inner.style.width) || 0;
+                inner.style.color = (currentWidthVal > 0 && currentWidthVal < 13) ? 'transparent' : textColor;
 
                 if (currentShape === 'circle') {
                     inner.style.backgroundColor = 'transparent';
