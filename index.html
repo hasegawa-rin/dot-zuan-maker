@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOT ZUAN MAKER</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ドット絵風フォントの読み込み -->
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+    <style>
+        /* スクロールバーのカスタマイズ */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+
+        #patternTable {
+            border-collapse: separate;
+            border-spacing: 0;
+            table-layout: fixed;
+            margin: 0;
+            padding: 0;
+            background-color: #fff;
+            width: max-content;
+        }
+
+        /* タイトルのドットフォント適用 */
+        .pixel-font {
+            font-family: 'DotGothic16', sans-serif;
+        }
+
+        /* 座標ヘッダーの基本スタイル */
+        .coord-header {
+            background-color: #f8fafc;
+            color: #94a3b8;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: normal;
+            text-align: center;
+            vertical-align: middle;
+            user-select: none;
+            z-index: 20;
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            box-sizing: border-box;
+            overflow: hidden;
+            padding: 0 !important;
+        }
+
+        /* 固定（Sticky）設定 */
+        .sticky-col-head { position: sticky; top: 0; z-index: 21; border-bottom: 2px solid #cbd5e1; }
+        .sticky-row-head { position: sticky; left: 0; z-index: 21; border-right: 2px solid #cbd5e1; }
+        .sticky-corner { position: sticky; top: 0; left: 0; z-index: 30; background-color: #e2e8f0; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; }
+
+        .grid-cell {
+            padding: 0 !important;
+            margin: 0;
+            border-right: 1px solid rgba(0,0,0,0.08);
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            user-select: none;
+            overflow: hidden;
+            box-sizing: border-box;
+            cursor: crosshair;
+        }
+
+        /* 中身のコンテンツボックス */
+        .cell-inner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            font-weight: bold;
+            overflow: hidden;
+            line-height: 1; 
+            box-sizing: border-box;
+        }
+        
+        .grid-cell:hover .cell-inner {
+            outline: 2px solid #2563eb;
+            outline-offset: -2px;
+            z-index: 10;
+        }
+
+        .border-l-bold { border-left: 2px solid rgba(0,0,0,0.4) !important; }
+        .border-t-bold { border-top: 2px solid rgba(0,0,0,0.4) !important; }
+        .coord-bold { color: #1e293b; font-weight: bold; background-color: #e2e8f0; }
+
+        .cell-circle {
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 90%;
+            height: 90%;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 4px;
+            border-bottom: 1px solid #f1f5f9;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        .legend-item:hover { background-color: #f1f5f9; }
+        .legend-item.active-brush { 
+            background-color: #e2e8f0;
+        }
+        
+        .color-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid rgba(0,0,0,0.1);
+            flex-shrink: 0;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+        }
+        .color-dot:hover {
+            transform: scale(1.1);
+        }
+
+        /* 透明を表す格子模様（チェッカーボード） */
+        .bg-checkerboard {
+            background-color: #fff;
+            background-image: 
+                linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%, #f0f0f0), 
+                linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%, #f0f0f0);
+            background-size: 8px 8px;
+            background-position: 0 0, 4px 4px;
+        }
+
+        /* 背景設定用のボタン（格子模様の上に色プレビュー） */
+        .bg-config-dot {
+            background-color: #fff;
+            background-image: linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee), linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee);
+            background-size: 6px 6px;
+            background-position: 0 0, 3px 3px;
+            overflow: hidden;
+        }
+        .bg-color-preview {
+            position: absolute;
+            inset: 0;
+            opacity: 0; 
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+        .bg-color-preview.is-active {
+            opacity: 0.9;
+        }
+
+        #pattern-container {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background: #f8fafc;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
+
+        .control-section {
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        input[type=range] {
+            accent-color: #2563eb;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-icon {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 h-screen w-screen text-slate-800 font-sans flex flex-col overflow-hidden">
+
+    <!-- ヘッダー：極限までコンパクト化 -->
+    <header class="bg-slate-900 px-5 py-1.5 flex justify-between items-center text-white shadow-md z-40 shrink-0">
+        <div class="flex items-baseline gap-4">
+            <h1 class="text-xl pixel-font font-bold tracking-wider text-white">
+                DOT ZUAN MAKER
+            </h1>
+            <span class="text-[9px] font-medium text-slate-500 opacity-70 tracking-tighter hidden sm:block">
+                Developed by kuhitomoha
+            </span>
+        </div>
+        <div class="flex gap-2">
+            <button id="downloadMcBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold py-1 px-3 rounded flex items-center gap-1.5 transition-all active:scale-95 shadow-lg border border-blue-500/20">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                <span>マイクラコード</span>
+            </button>
+            <button id="downloadCsvBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold py-1 px-3 rounded flex items-center gap-1.5 transition-all active:scale-95 shadow-lg border border-blue-500/20">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                <span>CSV</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 min-h-0 overflow-hidden">
+        <aside class="w-60 bg-white border-r border-slate-200 overflow-y-auto p-4 shrink-0 h-full z-30 shadow-sm">
+            <div class="control-section">
+                <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">1. 素材読み込み</label>
+                <input type="file" id="imageInput" accept="image/*" class="w-full text-[10px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+            </div>
+
+            <div class="control-section">
+                <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">2. 基本構成</label>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[10px] font-bold text-slate-600">横幅 (ドット)</label>
+                            <span id="val-width" class="text-[10px] font-mono font-bold text-blue-600">60</span>
+                        </div>
+                        <input type="range" id="targetWidth" value="60" min="5" max="60" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[10px] font-bold text-slate-600">最大色数</label>
+                            <span id="val-colors" class="text-[10px] font-mono font-bold text-blue-600">27</span>
+                        </div>
+                        <input type="range" id="maxColors" value="27" min="2" max="27" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">3. 図案データ設定</label>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[10px] font-bold text-slate-600">明るさ</label>
+                            <span id="val-brightness" class="text-[10px] text-slate-400">100%</span>
+                        </div>
+                        <input type="range" id="brightness" value="100" min="50" max="150" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[10px] font-bold text-slate-600">コントラスト</label>
+                            <span id="val-contrast" class="text-[10px] text-slate-400">100%</span>
+                        </div>
+                        <input type="range" id="contrast" value="100" min="50" max="150" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[10px] font-bold text-slate-600">彩度</label>
+                            <span id="val-saturate" class="text-[10px] text-slate-400">100%</span>
+                        </div>
+                        <input type="range" id="saturate" value="100" min="0" max="200" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[10px] font-bold text-slate-600">色相</label>
+                            <span id="val-hue" class="text-[10px] text-slate-400">0°</span>
+                        </div>
+                        <input type="range" id="hue" value="0" min="-180" max="180" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-600 mb-1">背景除去の対象</label>
+                        <select id="bgMode" class="w-full p-1.5 border border-slate-200 rounded text-[10px] bg-slate-50 outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                            <option value="none">なし</option>
+                            <option value="white">白のみ</option>
+                            <option value="auto" selected>自動判定</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="useDithering" class="text-[10px] font-bold text-slate-600">ディザリング変換</label>
+                        <input type="checkbox" id="useDithering" class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="useGooglePalette" class="text-[10px] font-bold text-slate-600">Googleカラー制限</label>
+                        <input type="checkbox" id="useGooglePalette" class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-section border-none">
+                <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">4. キャンバス表示</label>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[10px] font-bold text-slate-600">ズーム倍率</label>
+                            <span id="val-zoom" class="text-[10px] font-mono font-bold text-blue-600">100%</span>
+                        </div>
+                        <input type="range" id="zoom" value="100" min="100" max="500" step="10" class="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="showCoordinates" class="text-[10px] font-bold text-slate-600">座標を表示</label>
+                        <input type="checkbox" id="showCoordinates" checked class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="highlightBg" class="text-[10px] font-bold text-slate-600">背景範囲をチェック</label>
+                        <input type="checkbox" id="highlightBg" class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="showGridBold" class="text-[10px] font-bold text-slate-600">5マスごとの太線</label>
+                        <input type="checkbox" id="showGridBold" class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="showNumbers" class="text-[10px] font-bold text-slate-600">数字を表示</label>
+                        <input type="checkbox" id="showNumbers" checked class="w-3.5 h-3.5 cursor-pointer accent-blue-600">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button id="btn-square" class="shape-btn p-1.5 border rounded bg-blue-600 border-blue-600 text-white text-[10px] font-bold shadow-sm transition-all" data-shape="square">四角形</button>
+                        <button id="btn-circle" class="shape-btn p-1.5 border rounded bg-white border-slate-200 text-[10px] hover:bg-slate-50 transition-all" data-shape="circle">円形</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loadingStatus" class="flex items-center gap-2 text-[10px] text-blue-600 font-black hidden">
+                <span class="loading-icon"></span>
+                <span>計算中...</span>
+            </div>
+        </aside>
+
+        <main class="flex-1 bg-slate-100 flex flex-col h-full overflow-hidden border-r border-slate-200 min-w-0">
+            <div id="resultArea" class="hidden h-full flex flex-col min-h-0">
+                <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Canvas View</span>
+                    <span id="info-res" class="text-[9px] font-mono text-slate-400 tracking-tighter">-- x --</span>
+                </div>
+                <div class="flex-1 min-h-0 overflow-hidden">
+                    <div id="pattern-container">
+                        <table id="patternTable"></table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="placeholder" class="flex-1 flex flex-col items-center justify-center text-slate-300 px-4 text-center">
+                <svg class="w-12 h-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.587-1.587a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <p class="text-[10px] font-bold tracking-widest uppercase text-center px-4">画像を読み込んでください</p>
+            </div>
+        </main>
+
+        <aside class="w-[72px] bg-slate-50 overflow-y-auto shrink-0 h-full flex flex-col items-center border-l border-slate-200 shadow-inner">
+            <div class="w-full p-2 border-b border-slate-200 bg-white sticky top-0 z-10 text-center shadow-sm">
+                <h2 class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Palette</h2>
+            </div>
+            <div id="legendContainer" class="w-full flex flex-col">
+            </div>
+            <button id="resetPaletteBtn" class="w-full py-3 mt-auto border-t border-slate-200 bg-slate-100 hover:bg-slate-200 text-[8px] font-black text-slate-400 uppercase transition-colors sticky bottom-0">
+                Reset All
+            </button>
+        </aside>
+    </div>
+
+    <canvas id="processCanvas" style="display:none;"></canvas>
+
+    <script>
+        const GOOGLE_PALETTE_HEX = [
+            "#ffffff", "#f3f3f3", "#efefef", "#d9d9d9", "#cccccc", "#b7b7b7", "#999999", "#666666", "#434343", "#000000",
+            "#e6b8af", "#dd7e6b", "#cc4125", "#980000", "#a61c00", "#85200c", "#5b0f00", "#f4cccc", "#ea9999", "#e06666",
+            "#ff0000", "#cc0000", "#990000", "#660000", "#fce5cd", "#f9cb9c", "#f6b26b", "#ff9900", "#e69138", "#b45f06",
+            "#783f04", "#fff2cc", "#ffe599", "#ffd966", "#ffff00", "#f1c232", "#bf9000", "#7f6000", "#d9ead3", "#b6d7a8",
+            "#93c47d", "#00ff00", "#6aa84f", "#38761d", "#274e13", "#d0e0e3", "#a2c4c9", "#76a5af", "#00ffff", "#45818e",
+            "#134f5c", "#0c343d", "#c9daf8", "#a4c2f4", "#6d9eeb", "#4a86e8", "#3c78d8", "#1155cc", "#1c4587", "#cfe2f3",
+            "#9fc5e8", "#6fa8dc", "#0000ff", "#3d85c6", "#0b5394", "#073763", "#d9d2e9", "#b4a7d6", "#8e7cc3", "#9900ff",
+            "#674ea7", "#351c75", "#20124d", "#ead1dc", "#d5a6bd", "#c27ba0", "#ff00ff", "#a64d79", "#741b47", "#4c1130"
+        ];
+
+        const elements = {
+            imageInput: document.getElementById('imageInput'),
+            targetWidth: document.getElementById('targetWidth'),
+            maxColors: document.getElementById('maxColors'),
+            bgMode: document.getElementById('bgMode'),
+            hue: document.getElementById('hue'),
+            brightness: document.getElementById('brightness'),
+            contrast: document.getElementById('contrast'),
+            saturate: document.getElementById('saturate'),
+            useGooglePalette: document.getElementById('useGooglePalette'),
+            useDithering: document.getElementById('useDithering'),
+            showNumbers: document.getElementById('showNumbers'),
+            showGridBold: document.getElementById('showGridBold'),
+            showCoordinates: document.getElementById('showCoordinates'),
+            highlightBg: document.getElementById('highlightBg'),
+            zoom: document.getElementById('zoom'),
+            downloadCsvBtn: document.getElementById('downloadCsvBtn'),
+            downloadMcBtn: document.getElementById('downloadMcBtn'),
+            resetPaletteBtn: document.getElementById('resetPaletteBtn'),
+            patternTable: document.getElementById('patternTable'),
+            legendContainer: document.getElementById('legendContainer'),
+            resultArea: document.getElementById('resultArea'),
+            placeholder: document.getElementById('placeholder'),
+            patternContainer: document.getElementById('pattern-container'),
+            canvas: document.getElementById('processCanvas'),
+            valWidth: document.getElementById('val-width'),
+            valColors: document.getElementById('val-colors'),
+            valHue: document.getElementById('val-hue'),
+            valBrightness: document.getElementById('val-brightness'),
+            valContrast: document.getElementById('val-contrast'),
+            valSaturate: document.getElementById('val-saturate'),
+            valZoom: document.getElementById('val-zoom'),
+            infoRes: document.getElementById('info-res'),
+            loading: document.getElementById('loadingStatus')
+        };
+
+        const ctx = elements.canvas.getContext('2d');
+        let currentGridData = [];
+        let backupGridData = []; 
+        let currentPalette = [];
+        let backupPalette = [];
+        let currentShape = 'square';
+        let originalImg = null;
+        let debounceTimer = null;
+        let activeBrushId = null;
+        let bgHighlightColor = '#ff00ff';
+
+        const GOOGLE_PALETTE_RGB = GOOGLE_PALETTE_HEX.map(hex => hexToRgb(hex));
+
+        [
+            elements.targetWidth, elements.maxColors, elements.bgMode, 
+            elements.hue, elements.brightness, elements.contrast, elements.saturate, 
+            elements.useGooglePalette, elements.useDithering, elements.showNumbers, 
+            elements.showGridBold, elements.showCoordinates, elements.highlightBg, elements.zoom
+        ].forEach(el => {
+            el.addEventListener('input', () => {
+                updateLabels();
+                if (['zoom', 'showGridBold', 'showNumbers', 'showCoordinates', 'highlightBg'].includes(el.id)) {
+                    adjustCellSizes();
+                    if (el.id !== 'zoom') renderResult();
+                } else {
+                    triggerUpdate();
+                }
+            });
+        });
+
+        function updateLabels() {
+            elements.valWidth.textContent = elements.targetWidth.value;
+            elements.valColors.textContent = elements.maxColors.value;
+            elements.valHue.textContent = elements.hue.value + '°';
+            elements.valBrightness.textContent = elements.brightness.value + '%';
+            elements.valContrast.textContent = elements.contrast.value + '%';
+            elements.valSaturate.textContent = elements.saturate.value + '%';
+            elements.valZoom.textContent = elements.zoom.value + '%';
+        }
+
+        function updateShapeButtonUI() {
+            const sq = document.getElementById('btn-square');
+            const ci = document.getElementById('btn-circle');
+            if (currentShape === 'square') {
+                sq.className = 'shape-btn p-1.5 border rounded bg-blue-600 border-blue-600 text-white text-[10px] font-bold shadow-sm transition-all';
+                ci.className = 'shape-btn p-1.5 border rounded bg-white border-slate-200 text-slate-400 text-[10px] hover:bg-slate-50 transition-all';
+            } else {
+                ci.className = 'shape-btn p-1.5 border rounded bg-blue-600 border-blue-600 text-white text-[10px] font-bold shadow-sm transition-all';
+                sq.className = 'shape-btn p-1.5 border rounded bg-white border-slate-200 text-slate-400 text-[10px] hover:bg-slate-50 transition-all';
+            }
+        }
+
+        document.querySelectorAll('.shape-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentShape = btn.dataset.shape;
+                updateShapeButtonUI();
+                renderResult();
+            });
+        });
+
+        elements.imageInput.addEventListener('change', (e) => {
+            if (!e.target.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => { 
+                    originalImg = img; 
+                    elements.placeholder.classList.add('hidden');
+                    elements.resultArea.classList.remove('hidden');
+                    triggerUpdate(0); 
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        });
+
+        window.onresize = () => { if (currentGridData.length > 0) renderResult(); };
+
+        function triggerUpdate(ms = 300) {
+            if (!originalImg) return;
+            clearTimeout(debounceTimer);
+            elements.loading.classList.remove('hidden');
+            debounceTimer = setTimeout(() => {
+                processImage();
+                elements.loading.classList.add('hidden');
+            }, ms);
+        }
+
+        function rgbToHslObj(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) { h = s = 0; }
+            else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return { h, s, l };
+        }
+
+        async function processImage() {
+            if (!originalImg) return;
+            const tw = parseInt(elements.targetWidth.value);
+            const scale = tw / originalImg.width;
+            const th = Math.round(originalImg.height * scale);
+            const maxK = parseInt(elements.maxColors.value);
+            
+            elements.canvas.width = tw; elements.canvas.height = th;
+            elements.infoRes.textContent = `${tw} x ${th}`;
+
+            ctx.filter = `hue-rotate(${elements.hue.value}deg) brightness(${elements.brightness.value}%) contrast(${elements.contrast.value}%) saturate(${elements.saturate.value}%)`;
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(originalImg, 0, 0, tw, th);
+            ctx.filter = "none";
+
+            const data = ctx.getImageData(0, 0, tw, th).data;
+            let bgMask = new Array(tw * th).fill(false);
+            if (elements.bgMode.value === 'white') {
+                for (let i = 0; i < data.length; i += 4) if (data[i] >= 250 && data[i+1] >= 250 && data[i+2] >= 250) bgMask[i/4] = true;
+            } else if (elements.bgMode.value === 'auto') {
+                bgMask = computeFloodFillBackground(data, tw, th, 40);
+            }
+            for (let i = 0; i < data.length; i += 4) if (data[i + 3] < 128) bgMask[i/4] = true;
+
+            const pixels = [];
+            for (let i = 0; i < data.length; i += 4) if (!bgMask[i/4]) pixels.push({ r: data[i], g: data[i+1], b: data[i+2] });
+            
+            let rawClusters;
+            if (elements.useGooglePalette.checked) { rawClusters = getGooglePaletteClusters(pixels, maxK); }
+            else { rawClusters = getClustersWithMerge(pixels, maxK, 25); }
+
+            rawClusters.sort((a, b) => {
+                const hslA = rgbToHslObj(a.r, a.g, a.b);
+                const hslB = rgbToHslObj(b.r, b.g, b.b);
+                const isGrayA = hslA.s < 0.08; const isGrayB = hslB.s < 0.08;
+                if (isGrayA !== isGrayB) return isGrayA ? -1 : 1;
+                if (isGrayA && isGrayB) return hslB.l - hslA.l;
+                const bucketA = Math.floor(hslA.h * 12); const bucketB = Math.floor(hslB.h * 12);
+                if (bucketA !== bucketB) return bucketA - bucketB;
+                return hslB.l - hslA.l;
+            });
+
+            currentPalette = rawClusters.map((c, idx) => ({
+                id: idx + 1, r: Math.round(c.r), g: Math.round(c.g), b: Math.round(c.b),
+                hex: rgbToHex(Math.round(c.r), Math.round(c.g), Math.round(c.b))
+            }));
+            
+            backupPalette = JSON.parse(JSON.stringify(currentPalette));
+            currentGridData = buildGrid(data, tw, th, bgMask, elements.useDithering.checked);
+            backupGridData = JSON.parse(JSON.stringify(currentGridData));
+            
+            renderResult();
+        }
+
+        function buildGrid(data, w, h, bgMask, useDithering) {
+            const grid = []; const temp = new Float32Array(data);
+            for (let y = 0; y < h; y++) {
+                const row = [];
+                for (let x = 0; x < w; x++) {
+                    const idx = y * w + x;
+                    if (bgMask[idx]) { row.push(null); continue; }
+                    const i = idx * 4;
+                    const nearest = findNearestColor(temp[i], temp[i+1], temp[i+2], currentPalette);
+                    row.push(nearest.id);
+                    if (useDithering) {
+                        const er = temp[i] - nearest.r, eg = temp[i+1] - nearest.g, eb = temp[i+2] - nearest.b;
+                        const dist = (nx, ny, f) => {
+                            if (nx < 0 || nx >= w || ny >= h) return;
+                            const ki = (ny * w + nx) * 4;
+                            temp[ki] += er * f; temp[ki+1] += eg * f; temp[ki+2] += eb * f;
+                        };
+                        dist(x+1, y, 7/16); dist(x-1, y+1, 3/16); dist(x, y+1, 5/16); dist(x+1, y+1, 1/16);
+                    }
+                }
+                grid.push(row);
+            }
+            return grid;
+        }
+
+        function computeFloodFillBackground(data, w, h, tol) {
+            const mask = new Array(w * h).fill(false); const visited = new Array(w * h).fill(false);
+            const queue = [{x:0, y:0}, {x:w-1, y:0}, {x:0, y:h-1}, {x:w-1, y:h-1}];
+            const bases = queue.map(p => { const i = (p.y*w+p.x)*4; return [data[i], data[i+1], data[i+2]]; });
+            let head = 0;
+            while(head < queue.length) {
+                const {x, y} = queue[head++]; const idx = y*w+x;
+                if (x<0 || x>=w || y<0 || y>=h || visited[idx]) continue;
+                visited[idx] = true; const i = idx*4;
+                const distSq = bases.reduce((min, b) => Math.min(min, Math.pow(data[i]-b[0],2)+Math.pow(data[i+1]-b[1],2)+Math.pow(data[i+2]-b[2],2)), Infinity);
+                if (Math.sqrt(distSq) < tol || data[i+3] < 128) { mask[idx] = true; queue.push({x:x+1,y:y},{x:x-1,y:y},{x:x,y:y+1},{x:x,y:y-1}); }
+            }
+            return mask;
+        }
+
+        function getGooglePaletteClusters(pixels, k) {
+            if (pixels.length === 0) return [];
+            const countMap = new Map();
+            pixels.forEach(p => {
+                let minD = Infinity; let bestIdx = 0;
+                GOOGLE_PALETTE_RGB.forEach((gp, i) => {
+                    const d = Math.pow(p.r - gp.r, 2) + Math.pow(p.g - gp.g, 2) + Math.pow(p.b - gp.b, 2);
+                    if (d < minD) { minD = d; bestIdx = i; }
+                });
+                const key = GOOGLE_PALETTE_HEX[bestIdx];
+                countMap.set(key, (countMap.get(key) || 0) + 1);
+            });
+            const sortedEntries = [...countMap.entries()].sort((a, b) => b[1] - a[1]);
+            return sortedEntries.slice(0, k).map(entry => {
+                const rgb = hexToRgb(entry[0]); return { r: rgb.r, g: rgb.g, b: rgb.b };
+            });
+        }
+
+        function getClustersWithMerge(pixels, k, mergeThreshold) {
+            if (pixels.length === 0) return [];
+            const uniquePixels = Array.from(new Set(pixels.map(p => `${p.r},${p.g},${p.b}`)))
+                .map(str => { const [r,g,b] = str.split(',').map(Number); return {r,g,b}; });
+            const actualK = Math.min(k, uniquePixels.length);
+            let centroids = Array.from({length: actualK}, (_, i) => uniquePixels[Math.floor(uniquePixels.length / actualK * i)]);
+            for (let it=0; it<10; it++) {
+                const groups = Array.from({length: centroids.length}, () => []);
+                pixels.forEach(p => {
+                    let minD=Infinity, cIdx=0;
+                    centroids.forEach((c, idx) => {
+                        const d = Math.pow(p.r-c.r,2)+Math.pow(p.g-c.g,2)+Math.pow(p.b-c.b,2);
+                        if (d<minD) { minD=d; cIdx=idx; }
+                    });
+                    groups[cIdx].push(p);
+                });
+                centroids = groups.map((g, i) => g.length === 0 ? centroids[i] : {
+                    r: g.reduce((a,p)=>a+p.r,0)/g.length, g: g.reduce((a,p)=>a+p.g,0)/g.length, b: g.reduce((a,p)=>a+p.b,0)/g.length
+                });
+            }
+            let merged = true;
+            while(merged) {
+                merged = false;
+                for(let i=0; i<centroids.length; i++) {
+                    for(let j=i+1; j<centroids.length; j++) {
+                        const dist = Math.sqrt(Math.pow(centroids[i].r-centroids[j].r,2)+Math.pow(centroids[i].g-centroids[j].g,2)+Math.pow(centroids[i].b-centroids[j].b,2));
+                        if (dist < mergeThreshold) {
+                            centroids[i].r = (centroids[i].r + centroids[j].r) / 2;
+                            centroids[i].g = (centroids[i].g + centroids[j].g) / 2;
+                            centroids[i].b = (centroids[i].b + centroids[j].b) / 2;
+                            centroids.splice(j, 1); merged = true; break;
+                        }
+                    }
+                    if (merged) break;
+                }
+            }
+            return centroids;
+        }
+
+        function findNearestColor(r,g,b,pal) {
+            let minD=Infinity, best=pal[0];
+            pal.forEach(p => { const d = Math.pow(r-p.r,2)+Math.pow(g-p.g,2)+Math.pow(b-p.b,2); if (d<minD) { minD=d; best=p; } });
+            return best;
+        }
+
+        function rgbToHex(r, g, b) { return "#" + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join(''); }
+        function hexToRgb(hex) {
+            const res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return res ? { r: parseInt(res[1], 16), g: parseInt(res[2], 16), b: parseInt(res[3], 16) } : {r:0,g:0,b:0};
+        }
+
+        function renderResult() {
+            if (!currentGridData.length) return;
+            elements.placeholder.classList.add('hidden');
+            elements.resultArea.classList.remove('hidden');
+            elements.patternTable.innerHTML = '';
+            
+            const showBold = elements.showGridBold.checked;
+            const showNums = elements.showNumbers.checked;
+            const highlight = elements.highlightBg.checked;
+            const showCoords = elements.showCoordinates.checked;
+
+            const cols = currentGridData[0].length;
+
+            if (showCoords) {
+                const thead = document.createElement('thead');
+                const hTr = document.createElement('tr');
+                const corner = document.createElement('th');
+                corner.className = 'coord-header sticky-corner';
+                hTr.appendChild(corner);
+                for (let x = 0; x < cols; x++) {
+                    const th = document.createElement('th');
+                    th.className = 'coord-header sticky-col-head';
+                    th.innerHTML = `<div class="cell-inner" data-original-color="#94a3b8">${x + 1}</div>`;
+                    if (showBold && (x+1) % 5 === 0) th.classList.add('coord-bold');
+                    if (showBold && x % 5 === 0 && x !== 0) th.classList.add('border-l-bold');
+                    hTr.appendChild(th);
+                }
+                thead.appendChild(hTr);
+                elements.patternTable.appendChild(thead);
+            }
+
+            const tbody = document.createElement('tbody');
+            currentGridData.forEach((row, y) => {
+                const tr = document.createElement('tr');
+                if (showCoords) {
+                    const th = document.createElement('th');
+                    th.className = 'coord-header sticky-row-head';
+                    th.innerHTML = `<div class="cell-inner" data-original-color="#94a3b8">${y + 1}</div>`;
+                    if (showBold && (y+1) % 5 === 0) th.classList.add('coord-bold');
+                    if (showBold && y % 5 === 0 && y !== 0) th.classList.add('border-t-bold');
+                    tr.appendChild(th);
+                }
+                row.forEach((v, x) => {
+                    const td = document.createElement('td');
+                    td.className = 'grid-cell';
+                    if (showBold) {
+                        if (x % 5 === 0 && x !== 0) td.classList.add('border-l-bold');
+                        if (y % 5 === 0 && y !== 0) td.classList.add('border-t-bold');
+                    }
+
+                    td.onclick = (e) => {
+                        if (activeBrushId === null) return;
+                        const newVal = (activeBrushId === -1) ? null : activeBrushId;
+                        currentGridData[y][x] = newVal;
+                        const targetInner = td.querySelector('.cell-inner');
+                        updateSingleCellInner(targetInner, newVal, highlight, showNums);
+                    };
+
+                    const inner = document.createElement('div');
+                    inner.className = 'cell-inner';
+                    updateSingleCellInner(inner, v, highlight, showNums);
+                    
+                    td.appendChild(inner);
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            elements.patternTable.appendChild(tbody);
+            
+            requestAnimationFrame(() => {
+                adjustCellSizes();
+                renderLegend();
+            });
+        }
+
+        function updateSingleCellInner(inner, val, highlight, showNums) {
+            inner.innerHTML = '';
+            inner.className = 'cell-inner';
+            
+            if (val === null) {
+                if (highlight) {
+                    inner.style.backgroundColor = bgHighlightColor;
+                    inner.style.backgroundImage = 'none';
+                } else {
+                    inner.style.backgroundColor = 'transparent';
+                    inner.classList.add('bg-checkerboard'); 
+                }
+                inner.style.color = 'transparent';
+                inner.dataset.originalColor = 'transparent';
+            } else {
+                inner.classList.remove('bg-checkerboard');
+                inner.style.backgroundImage = 'none';
+                const color = currentPalette.find(p => p.id === v || (typeof v === 'number' && p.id === val));
+                // Fix for the find logic
+                const foundColor = currentPalette.find(p => p.id === val);
+                if (!foundColor) return;
+                const b = (foundColor.r*299+foundColor.g*587+foundColor.b*114)/1000;
+                const textColor = b > 128 ? '#000' : '#fff';
+                inner.dataset.originalColor = textColor;
+                const currentSz = parseFloat(inner.style.width);
+                inner.style.color = (currentSz < 13) ? 'transparent' : textColor;
+
+                if (currentShape === 'circle') {
+                    inner.style.backgroundColor = 'transparent';
+                    const cir = document.createElement('div');
+                    cir.className = 'cell-circle';
+                    cir.style.backgroundColor = foundColor.hex;
+                    cir.style.color = inner.style.color;
+                    if (showNums) cir.textContent = val;
+                    inner.appendChild(cir);
+                } else {
+                    inner.style.backgroundColor = foundColor.hex;
+                    inner.style.color = inner.style.color;
+                    if (showNums) inner.textContent = val;
+                }
+            }
+        }
+
+        function triggerColorPicker(initialColor, onUpdate) {
+            const picker = document.createElement('input');
+            picker.type = 'color';
+            picker.value = initialColor;
+            picker.style.position = 'fixed';
+            picker.style.top = '-1000px'; 
+            document.body.appendChild(picker);
+            picker.oninput = (ev) => onUpdate(ev.target.value);
+            picker.onchange = () => document.body.removeChild(picker);
+            picker.click();
+        }
+
+        function renderLegend() {
+            elements.legendContainer.innerHTML = '';
+            
+            const eraserItem = document.createElement('div');
+            eraserItem.className = 'legend-item shadow-sm ' + (activeBrushId === -1 ? 'active-brush' : '');
+            eraserItem.onclick = () => {
+                activeBrushId = (activeBrushId === -1) ? null : -1;
+                renderLegend();
+            };
+            const bgDot = document.createElement('div');
+            bgDot.className = 'color-dot bg-config-dot shadow-inner';
+            const bgPreview = document.createElement('div');
+            bgPreview.className = 'bg-color-preview ' + (elements.highlightBg.checked ? 'is-active' : '');
+            bgPreview.style.backgroundColor = bgHighlightColor;
+            bgDot.appendChild(bgPreview);
+            bgDot.onclick = (e) => {
+                e.stopPropagation();
+                triggerColorPicker(bgHighlightColor, (newColor) => {
+                    bgHighlightColor = newColor;
+                    elements.highlightBg.checked = true;
+                    bgPreview.style.backgroundColor = bgHighlightColor;
+                    renderResult();
+                });
+            };
+            const bgLabel = document.createElement('span');
+            bgLabel.className = 'text-[8px] font-bold text-slate-400 leading-none';
+            bgLabel.textContent = '背景';
+            eraserItem.appendChild(bgDot);
+            eraserItem.appendChild(bgLabel);
+            elements.legendContainer.appendChild(eraserItem);
+
+            currentPalette.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'legend-item shadow-sm ' + (activeBrushId === c.id ? 'active-brush' : '');
+                div.onclick = () => {
+                    activeBrushId = (activeBrushId === c.id) ? null : c.id;
+                    renderLegend();
+                };
+                const dot = document.createElement('div');
+                dot.className = 'color-dot shadow-inner';
+                dot.style.backgroundColor = c.hex;
+                dot.onclick = (e) => {
+                    e.stopPropagation();
+                    triggerColorPicker(c.hex, (newColor) => {
+                        const rgb = hexToRgb(newColor);
+                        if (rgb) {
+                            c.hex = newColor;
+                            c.r = rgb.r; c.g = rgb.g; c.b = rgb.b;
+                            renderResult();
+                        }
+                    });
+                };
+                const idLabel = document.createElement('span');
+                idLabel.className = 'text-[9px] font-mono font-black text-slate-500';
+                idLabel.textContent = c.id;
+                div.appendChild(dot);
+                div.appendChild(idLabel);
+                elements.legendContainer.appendChild(div);
+            });
+        }
+
+        elements.resetPaletteBtn.onclick = () => {
+            currentPalette = JSON.parse(JSON.stringify(backupPalette));
+            currentGridData = JSON.parse(JSON.stringify(backupGridData));
+            renderResult();
+        };
+
+        function adjustCellSizes() {
+            if (currentGridData.length === 0) return;
+            const container = elements.patternContainer;
+            const cw = container.clientWidth;
+            if (cw <= 0) { requestAnimationFrame(adjustCellSizes); return; }
+            const cols = currentGridData[0].length;
+            const showCoords = elements.showCoordinates.checked;
+            const totalCols = showCoords ? cols + 1 : cols;
+            const baseSz = cw / totalCols;
+            const zoomFactor = parseInt(elements.zoom.value) / 100;
+            const sz = (baseSz * zoomFactor).toFixed(3);
+            const szPx = `${sz}px`;
+            const fs = (sz * 0.45).toFixed(1) + 'px';
+            elements.patternTable.style.width = (sz * totalCols).toFixed(2) + 'px';
+            const allCells = elements.patternTable.querySelectorAll('td, th');
+            allCells.forEach(cell => {
+                cell.style.width = szPx; cell.style.height = szPx;
+                cell.style.minWidth = szPx; cell.style.maxWidth = szPx;
+                cell.style.minHeight = szPx; cell.style.maxHeight = szPx;
+                const inner = cell.querySelector('.cell-inner');
+                if (inner) {
+                    inner.style.width = szPx; inner.style.height = szPx; inner.style.fontSize = fs;
+                    if (parseFloat(sz) < 13) { inner.style.color = "transparent"; }
+                    else { inner.style.color = inner.dataset.originalColor || "inherit"; }
+                    const cir = inner.querySelector('.cell-circle');
+                    if (cir) {
+                        cir.style.fontSize = fs;
+                        if (parseFloat(sz) < 13) { cir.style.color = "transparent"; }
+                        else { cir.style.color = inner.dataset.originalColor || "inherit"; }
+                    }
+                }
+            });
+        }
+
+        function getTrimmedData() {
+            if (!currentGridData.length) return [];
+            let start = -1;
+            let end = -1;
+            for (let i = 0; i < currentGridData.length; i++) {
+                const hasData = currentGridData[i].some(v => v !== null);
+                if (hasData) {
+                    if (start === -1) start = i;
+                    end = i;
+                }
+            }
+            if (start === -1) return [];
+            return currentGridData.slice(start, end + 1);
+        }
+
+        elements.downloadCsvBtn.onclick = () => {
+            const trimmed = getTrimmedData();
+            if (trimmed.length === 0) return;
+            let csv = "\uFEFF" + trimmed.map(r => r.map(v => v||"").join(",")).join("\n");
+            const blob = new Blob([csv], {type:'text/csv'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'dot_pattern.csv'; a.click();
+        };
+
+        elements.downloadMcBtn.onclick = () => {
+            const trimmed = getTrimmedData();
+            if (trimmed.length === 0) return;
+            let setItemLines = "";
+            for (let i = 1; i <= currentPalette.length; i++) {
+                setItemLines += `    agent.setItem(GRASS, 64, ${i})\n`;
+            }
+            const reversedRows = [...trimmed].reverse();
+            const dataStrings = reversedRows.map(row => {
+                const values = row.map(v => v === null ? "0" : v).join(",");
+                return `\t"${values}".split(",")`;
+            }).join(",\n");
+            const code = `let すべての行のデータ: string[][] = []
+function ブロックを補充する () {
+${setItemLines}}
+function すべての行のデータをつくる () {
+    すべての行のデータ = [
+${dataStrings}
+	]
+}
+player.onChat("tp", function () {
+    agent.teleportToPlayer()
+})
+player.onChat("build", function () {
+    agent.turn(NORTH)
+    すべての行のデータをつくる()
+    for (let 現在の行 of すべての行のデータ) {
+        ブロックを補充する()
+        for (let 値 of 現在の行) {
+            if (parseFloat(値) > 0) {
+                agent.setSlot(parseFloat(値))
+                agent.place(BACK)
+            }
+            agent.move(FORWARD, 1)
+        }
+        agent.move(UP, 1)
+        agent.move(BACK, 現在の行.length)
+    }
+})`;
+            const blob = new Blob([code], {type:'text/plain'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'minecraft_makecode.txt';
+            a.click();
+        };
+    </script>
+</body>
+</html>
